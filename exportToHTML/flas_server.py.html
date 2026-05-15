@@ -1,0 +1,137 @@
+<html>
+<head>
+<title>flas_server.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #6aab73;}
+.s5 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+flas_server.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">flask </span><span class="s0">import </span><span class="s1">Flask</span><span class="s2">, </span><span class="s1">request</span><span class="s2">, </span><span class="s1">jsonify</span>
+<span class="s0">import </span><span class="s1">numpy </span><span class="s0">as </span><span class="s1">np</span>
+<span class="s0">import </span><span class="s1">librosa</span>
+<span class="s0">import </span><span class="s1">base64</span>
+<span class="s0">from </span><span class="s1">tensorflow</span><span class="s2">.</span><span class="s1">keras</span><span class="s2">.</span><span class="s1">models </span><span class="s0">import </span><span class="s1">load_model</span>
+<span class="s0">import </span><span class="s1">logging</span>
+
+<span class="s1">app </span><span class="s2">= </span><span class="s1">Flask</span><span class="s2">(</span><span class="s1">__name__</span><span class="s2">)</span>
+<span class="s1">logging</span><span class="s2">.</span><span class="s1">basicConfig</span><span class="s2">(</span><span class="s1">level</span><span class="s2">=</span><span class="s1">logging</span><span class="s2">.</span><span class="s1">DEBUG</span><span class="s2">)</span>
+
+<span class="s3"># Load model</span>
+<span class="s1">model </span><span class="s2">= </span><span class="s1">load_model</span><span class="s2">(</span><span class="s4">&quot;lstm_verse_classifier.keras&quot;</span><span class="s2">)</span>
+
+<span class="s3"># Constants</span>
+<span class="s1">RATE </span><span class="s2">= </span><span class="s5">16000</span>
+<span class="s1">N_MFCC </span><span class="s2">= </span><span class="s5">13</span>
+<span class="s1">MAX_LEN </span><span class="s2">= </span><span class="s5">50</span>
+
+<span class="s3"># Verse Texts</span>
+<span class="s1">verse_texts_by_surah </span><span class="s2">= {</span>
+    <span class="s4">&quot;al-ikhlas&quot;</span><span class="s2">: {</span>
+        <span class="s5">1</span><span class="s2">: </span><span class="s4">&quot;قُلْ هُوَ اللَّهُ أَحَدٌ&quot;</span><span class="s2">,</span>
+        <span class="s5">2</span><span class="s2">: </span><span class="s4">&quot;اللَّهُ الصَّمَدُ&quot;</span><span class="s2">,</span>
+        <span class="s5">3</span><span class="s2">: </span><span class="s4">&quot;لَمْ يَلِدْ وَلَمْ يُولَدْ&quot;</span><span class="s2">,</span>
+        <span class="s5">4</span><span class="s2">: </span><span class="s4">&quot;وَلَمْ يَكُن لَهُۥۤ۟ كُفُوًا أَحَدٌ&quot;</span>
+    <span class="s2">},</span>
+    <span class="s4">&quot;al-fatihah&quot;</span><span class="s2">: {</span>
+        <span class="s5">1</span><span class="s2">: </span><span class="s4">&quot;بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ&quot;</span><span class="s2">,</span>
+        <span class="s5">2</span><span class="s2">: </span><span class="s4">&quot;الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ&quot;</span><span class="s2">,</span>
+        <span class="s5">3</span><span class="s2">: </span><span class="s4">&quot;الرَّحْمَٰنِ الرَّحِيمِ&quot;</span><span class="s2">,</span>
+        <span class="s5">4</span><span class="s2">: </span><span class="s4">&quot;مَالِكِ يَوْمِ الدِّينِ&quot;</span><span class="s2">,</span>
+        <span class="s5">5</span><span class="s2">: </span><span class="s4">&quot;إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ&quot;</span><span class="s2">,</span>
+        <span class="s5">6</span><span class="s2">: </span><span class="s4">&quot;اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ&quot;</span><span class="s2">,</span>
+        <span class="s5">7</span><span class="s2">: </span><span class="s4">&quot;صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ الْمَغْضُوبِ عَلَيْهِمْ وَلَا الضَّالِّينَ&quot;</span>
+    <span class="s2">},</span>
+    <span class="s4">&quot;an-nas&quot;</span><span class="s2">: {</span>
+        <span class="s5">1</span><span class="s2">: </span><span class="s4">&quot;قُلْ أَعُوذُ بِرَبِّ النَّاسِ&quot;</span><span class="s2">,</span>
+        <span class="s5">2</span><span class="s2">: </span><span class="s4">&quot;مَلِكِ النَّاسِ&quot;</span><span class="s2">,</span>
+        <span class="s5">3</span><span class="s2">: </span><span class="s4">&quot;إِلَٰهِ النَّاسِ&quot;</span><span class="s2">,</span>
+        <span class="s5">4</span><span class="s2">: </span><span class="s4">&quot;مِن شَرِّ الْوَسْوَاسِ الْخَنَّاسِ&quot;</span><span class="s2">,</span>
+        <span class="s5">5</span><span class="s2">: </span><span class="s4">&quot;الَّذِي يُوَسْوِسُ فِي صُدُورِ النَّاسِ&quot;</span><span class="s2">,</span>
+        <span class="s5">6</span><span class="s2">: </span><span class="s4">&quot;مِنَ الْجِنَّةِ وَالنَّاسِ&quot;</span>
+    <span class="s2">}</span>
+<span class="s2">}</span>
+
+<span class="s2">@</span><span class="s1">app</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/'</span><span class="s2">)</span>
+<span class="s0">def </span><span class="s1">home</span><span class="s2">():</span>
+    <span class="s0">return </span><span class="s4">'✅ Flask Quranic Verse Classifier is Running'</span><span class="s2">, </span><span class="s5">200</span>
+
+<span class="s0">def </span><span class="s1">predict_verse</span><span class="s2">(</span><span class="s1">audio_np</span><span class="s2">):</span>
+    <span class="s0">try</span><span class="s2">:</span>
+        <span class="s1">y_trimmed</span><span class="s2">, </span><span class="s1">_ </span><span class="s2">= </span><span class="s1">librosa</span><span class="s2">.</span><span class="s1">effects</span><span class="s2">.</span><span class="s1">trim</span><span class="s2">(</span><span class="s1">audio_np</span><span class="s2">, </span><span class="s1">top_db</span><span class="s2">=</span><span class="s5">25</span><span class="s2">)</span>
+        <span class="s0">if </span><span class="s1">len</span><span class="s2">(</span><span class="s1">y_trimmed</span><span class="s2">) == </span><span class="s5">0</span><span class="s2">:</span>
+            <span class="s0">return None</span><span class="s2">, </span><span class="s5">0.0</span>
+
+        <span class="s1">mfcc </span><span class="s2">= </span><span class="s1">librosa</span><span class="s2">.</span><span class="s1">feature</span><span class="s2">.</span><span class="s1">mfcc</span><span class="s2">(</span><span class="s1">y</span><span class="s2">=</span><span class="s1">y_trimmed</span><span class="s2">, </span><span class="s1">sr</span><span class="s2">=</span><span class="s1">RATE</span><span class="s2">, </span><span class="s1">n_mfcc</span><span class="s2">=</span><span class="s1">N_MFCC</span><span class="s2">).</span><span class="s1">T</span>
+        <span class="s0">if </span><span class="s1">mfcc</span><span class="s2">.</span><span class="s1">shape</span><span class="s2">[</span><span class="s5">0</span><span class="s2">] &gt; </span><span class="s1">MAX_LEN</span><span class="s2">:</span>
+            <span class="s1">mfcc </span><span class="s2">= </span><span class="s1">mfcc</span><span class="s2">[:</span><span class="s1">MAX_LEN</span><span class="s2">]</span>
+        <span class="s0">else</span><span class="s2">:</span>
+            <span class="s1">mfcc </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">pad</span><span class="s2">(</span><span class="s1">mfcc</span><span class="s2">, ((</span><span class="s5">0</span><span class="s2">, </span><span class="s1">MAX_LEN </span><span class="s2">- </span><span class="s1">mfcc</span><span class="s2">.</span><span class="s1">shape</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]), (</span><span class="s5">0</span><span class="s2">, </span><span class="s5">0</span><span class="s2">)))</span>
+
+        <span class="s1">mfcc </span><span class="s2">= (</span><span class="s1">mfcc </span><span class="s2">- </span><span class="s1">np</span><span class="s2">.</span><span class="s1">mean</span><span class="s2">(</span><span class="s1">mfcc</span><span class="s2">)) / (</span><span class="s1">np</span><span class="s2">.</span><span class="s1">std</span><span class="s2">(</span><span class="s1">mfcc</span><span class="s2">) + </span><span class="s5">1e-10</span><span class="s2">)</span>
+        <span class="s1">mfcc </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">expand_dims</span><span class="s2">(</span><span class="s1">mfcc</span><span class="s2">, </span><span class="s1">axis</span><span class="s2">=</span><span class="s5">0</span><span class="s2">)</span>
+
+        <span class="s1">prediction </span><span class="s2">= </span><span class="s1">model</span><span class="s2">.</span><span class="s1">predict</span><span class="s2">(</span><span class="s1">mfcc</span><span class="s2">, </span><span class="s1">verbose</span><span class="s2">=</span><span class="s5">0</span><span class="s2">)</span>
+        <span class="s1">predicted_index </span><span class="s2">= </span><span class="s1">int</span><span class="s2">(</span><span class="s1">np</span><span class="s2">.</span><span class="s1">argmax</span><span class="s2">(</span><span class="s1">prediction</span><span class="s2">)) + </span><span class="s5">1</span>
+        <span class="s1">confidence </span><span class="s2">= </span><span class="s1">float</span><span class="s2">(</span><span class="s1">np</span><span class="s2">.</span><span class="s1">max</span><span class="s2">(</span><span class="s1">prediction</span><span class="s2">))</span>
+        <span class="s0">return </span><span class="s1">predicted_index</span><span class="s2">, </span><span class="s1">confidence</span>
+    <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+        <span class="s1">logging</span><span class="s2">.</span><span class="s1">error</span><span class="s2">(</span><span class="s4">f&quot;❌ Prediction Error: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+        <span class="s0">return None</span><span class="s2">, </span><span class="s5">0.0</span>
+
+<span class="s2">@</span><span class="s1">app</span><span class="s2">.</span><span class="s1">route</span><span class="s2">(</span><span class="s4">'/predict'</span><span class="s2">, </span><span class="s1">methods</span><span class="s2">=[</span><span class="s4">'POST'</span><span class="s2">])</span>
+<span class="s0">def </span><span class="s1">predict</span><span class="s2">():</span>
+    <span class="s0">try</span><span class="s2">:</span>
+        <span class="s1">audio_base64 </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;audio_base64&quot;</span><span class="s2">, </span><span class="s4">&quot;&quot;</span><span class="s2">)</span>
+        <span class="s1">surah </span><span class="s2">= </span><span class="s1">request</span><span class="s2">.</span><span class="s1">form</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s4">&quot;surah&quot;</span><span class="s2">, </span><span class="s4">&quot;al-ikhlas&quot;</span><span class="s2">).</span><span class="s1">strip</span><span class="s2">().</span><span class="s1">lower</span><span class="s2">()</span>
+
+        <span class="s0">if not </span><span class="s1">audio_base64</span><span class="s2">:</span>
+            <span class="s1">logging</span><span class="s2">.</span><span class="s1">warning</span><span class="s2">(</span><span class="s4">&quot;⚠️ Missing audio_base64 field&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span><span class="s4">&quot;error&quot;</span><span class="s2">: </span><span class="s4">&quot;Missing 'audio_base64' field&quot;</span><span class="s2">}), </span><span class="s5">400</span>
+
+        <span class="s0">try</span><span class="s2">:</span>
+            <span class="s1">audio_bytes </span><span class="s2">= </span><span class="s1">base64</span><span class="s2">.</span><span class="s1">b64decode</span><span class="s2">(</span><span class="s1">audio_base64</span><span class="s2">)</span>
+            <span class="s1">audio_np </span><span class="s2">= </span><span class="s1">np</span><span class="s2">.</span><span class="s1">frombuffer</span><span class="s2">(</span><span class="s1">audio_bytes</span><span class="s2">, </span><span class="s1">dtype</span><span class="s2">=</span><span class="s1">np</span><span class="s2">.</span><span class="s1">int16</span><span class="s2">).</span><span class="s1">astype</span><span class="s2">(</span><span class="s1">np</span><span class="s2">.</span><span class="s1">float32</span><span class="s2">) / </span><span class="s5">32768.0</span>
+        <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+            <span class="s1">logging</span><span class="s2">.</span><span class="s1">warning</span><span class="s2">(</span><span class="s4">&quot;⚠️ Base64 decode failed&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span><span class="s4">&quot;error&quot;</span><span class="s2">: </span><span class="s4">f&quot;Base64 decoding error: </span><span class="s0">{</span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">}), </span><span class="s5">400</span>
+
+        <span class="s1">verse_index</span><span class="s2">, </span><span class="s1">confidence </span><span class="s2">= </span><span class="s1">predict_verse</span><span class="s2">(</span><span class="s1">audio_np</span><span class="s2">)</span>
+
+        <span class="s0">if </span><span class="s1">verse_index </span><span class="s0">is None</span><span class="s2">:</span>
+            <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span><span class="s4">&quot;message&quot;</span><span class="s2">: </span><span class="s4">&quot;Silence or unreadable audio&quot;</span><span class="s2">}), </span><span class="s5">200</span>
+
+        <span class="s0">if </span><span class="s1">confidence </span><span class="s2">&gt; </span><span class="s5">0.4</span><span class="s2">:</span>
+            <span class="s1">verse_text </span><span class="s2">= </span><span class="s1">verse_texts_by_surah</span><span class="s2">.</span><span class="s1">get</span><span class="s2">(</span><span class="s1">surah</span><span class="s2">, {}).</span><span class="s1">get</span><span class="s2">(</span><span class="s1">verse_index</span><span class="s2">, </span><span class="s4">&quot;Unknown verse&quot;</span><span class="s2">)</span>
+            <span class="s1">logging</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">f&quot;✅ Predicted: Verse </span><span class="s0">{</span><span class="s1">verse_index</span><span class="s0">}</span><span class="s4">, Confidence </span><span class="s0">{</span><span class="s1">confidence</span><span class="s0">:</span><span class="s4">.2f</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span>
+                <span class="s4">&quot;verse_index&quot;</span><span class="s2">: </span><span class="s1">verse_index</span><span class="s2">,</span>
+                <span class="s4">&quot;confidence&quot;</span><span class="s2">: </span><span class="s1">round</span><span class="s2">(</span><span class="s1">confidence</span><span class="s2">, </span><span class="s5">4</span><span class="s2">),</span>
+                <span class="s4">&quot;verse_text&quot;</span><span class="s2">: </span><span class="s1">verse_text</span>
+            <span class="s2">})</span>
+        <span class="s0">else</span><span class="s2">:</span>
+            <span class="s1">logging</span><span class="s2">.</span><span class="s1">info</span><span class="s2">(</span><span class="s4">f&quot;⚠️ Low Confidence: </span><span class="s0">{</span><span class="s1">confidence</span><span class="s0">:</span><span class="s4">.2f</span><span class="s0">}</span><span class="s4">&quot;</span><span class="s2">)</span>
+            <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span>
+                <span class="s4">&quot;message&quot;</span><span class="s2">: </span><span class="s4">&quot;Low confidence&quot;</span><span class="s2">,</span>
+                <span class="s4">&quot;confidence&quot;</span><span class="s2">: </span><span class="s1">round</span><span class="s2">(</span><span class="s1">confidence</span><span class="s2">, </span><span class="s5">4</span><span class="s2">)</span>
+            <span class="s2">}), </span><span class="s5">200</span>
+
+    <span class="s0">except </span><span class="s1">Exception </span><span class="s0">as </span><span class="s1">e</span><span class="s2">:</span>
+        <span class="s1">logging</span><span class="s2">.</span><span class="s1">exception</span><span class="s2">(</span><span class="s4">&quot;❌ Backend Exception:&quot;</span><span class="s2">)</span>
+        <span class="s0">return </span><span class="s1">jsonify</span><span class="s2">({</span><span class="s4">&quot;error&quot;</span><span class="s2">: </span><span class="s4">&quot;Internal server error&quot;</span><span class="s2">, </span><span class="s4">&quot;details&quot;</span><span class="s2">: </span><span class="s1">str</span><span class="s2">(</span><span class="s1">e</span><span class="s2">)}), </span><span class="s5">500</span>
+
+<span class="s0">if </span><span class="s1">__name__ </span><span class="s2">== </span><span class="s4">'__main__'</span><span class="s2">:</span>
+    <span class="s1">app</span><span class="s2">.</span><span class="s1">run</span><span class="s2">(</span><span class="s1">host</span><span class="s2">=</span><span class="s4">'0.0.0.0'</span><span class="s2">, </span><span class="s1">port</span><span class="s2">=</span><span class="s5">5000</span><span class="s2">, </span><span class="s1">debug</span><span class="s2">=</span><span class="s0">True</span><span class="s2">)</span>
+</pre>
+</body>
+</html>

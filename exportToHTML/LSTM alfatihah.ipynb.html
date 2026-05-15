@@ -1,0 +1,256 @@
+<html>
+<head>
+<title>LSTM alfatihah.ipynb</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+.s1 { color: #cf8e6d;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+.ls0 { height: 1px; border-width: 0; color: #43454a; background-color:#43454a}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+LSTM alfatihah.ipynb</font>
+</center></td></tr></table>
+<pre><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">os</span>
+<span class="s1">import </span><span class="s0">librosa</span>
+<span class="s1">import </span><span class="s0">numpy </span><span class="s1">as </span><span class="s0">np</span>
+<span class="s1">import </span><span class="s0">pandas </span><span class="s1">as </span><span class="s0">pd</span>
+
+<span class="s0">folder_path </span><span class="s2">= </span><span class="s3">r&quot;C:\Users\amiru\OneDrive\Desktop\Sound recordings_AUG&quot;  </span><span class="s4"># Audio folder path</span>
+
+<span class="s0">mfcc_data </span><span class="s2">= []</span>
+<span class="s0">labels </span><span class="s2">= []</span>
+
+<span class="s4"># Define fixed parameters</span>
+<span class="s0">n_mfcc </span><span class="s2">= </span><span class="s5">13</span>
+<span class="s0">max_len </span><span class="s2">= </span><span class="s5">50  </span><span class="s4"># number of time steps</span>
+
+<span class="s4"># Loop over files</span>
+<span class="s1">for </span><span class="s0">filename </span><span class="s1">in </span><span class="s0">os</span><span class="s2">.</span><span class="s0">listdir</span><span class="s2">(</span><span class="s0">folder_path</span><span class="s2">):</span>
+    <span class="s1">if </span><span class="s0">filename</span><span class="s2">.</span><span class="s0">endswith</span><span class="s2">(</span><span class="s3">&quot;.wav&quot;</span><span class="s2">):</span>
+        <span class="s0">path </span><span class="s2">= </span><span class="s0">os</span><span class="s2">.</span><span class="s0">path</span><span class="s2">.</span><span class="s0">join</span><span class="s2">(</span><span class="s0">folder_path</span><span class="s2">, </span><span class="s0">filename</span><span class="s2">)</span>
+        <span class="s0">label </span><span class="s2">= </span><span class="s0">filename</span><span class="s2">.</span><span class="s0">split</span><span class="s2">(</span><span class="s3">&quot;V&quot;</span><span class="s2">)[</span><span class="s5">1</span><span class="s2">][</span><span class="s5">0</span><span class="s2">]  </span><span class="s4"># Extract '1', '2', '3', '4'</span>
+
+        <span class="s1">try</span><span class="s2">:</span>
+            <span class="s0">y</span><span class="s2">, </span><span class="s0">sr </span><span class="s2">= </span><span class="s0">librosa</span><span class="s2">.</span><span class="s0">load</span><span class="s2">(</span><span class="s0">path</span><span class="s2">, </span><span class="s0">sr</span><span class="s2">=</span><span class="s5">16000</span><span class="s2">)</span>
+            <span class="s0">mfcc </span><span class="s2">= </span><span class="s0">librosa</span><span class="s2">.</span><span class="s0">feature</span><span class="s2">.</span><span class="s0">mfcc</span><span class="s2">(</span><span class="s0">y</span><span class="s2">=</span><span class="s0">y</span><span class="s2">, </span><span class="s0">sr</span><span class="s2">=</span><span class="s0">sr</span><span class="s2">, </span><span class="s0">n_mfcc</span><span class="s2">=</span><span class="s0">n_mfcc</span><span class="s2">).</span><span class="s0">T  </span><span class="s4"># shape: (time, features)</span>
+
+            <span class="s4"># Pad or truncate to fixed length</span>
+            <span class="s1">if </span><span class="s0">mfcc</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">0</span><span class="s2">] &lt; </span><span class="s0">max_len</span><span class="s2">:</span>
+                <span class="s0">pad_width </span><span class="s2">= </span><span class="s0">max_len </span><span class="s2">- </span><span class="s0">mfcc</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span>
+                <span class="s0">mfcc </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">pad</span><span class="s2">(</span><span class="s0">mfcc</span><span class="s2">, ((</span><span class="s5">0</span><span class="s2">, </span><span class="s0">pad_width</span><span class="s2">), (</span><span class="s5">0</span><span class="s2">, </span><span class="s5">0</span><span class="s2">)), </span><span class="s0">mode</span><span class="s2">=</span><span class="s3">'constant'</span><span class="s2">)</span>
+            <span class="s1">else</span><span class="s2">:</span>
+                <span class="s0">mfcc </span><span class="s2">= </span><span class="s0">mfcc</span><span class="s2">[:</span><span class="s0">max_len</span><span class="s2">, :]</span>
+
+            <span class="s0">mfcc_data</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">mfcc</span><span class="s2">)</span>
+            <span class="s0">labels</span><span class="s2">.</span><span class="s0">append</span><span class="s2">(</span><span class="s0">int</span><span class="s2">(</span><span class="s0">label</span><span class="s2">))</span>
+        <span class="s1">except </span><span class="s0">Exception </span><span class="s1">as </span><span class="s0">e</span><span class="s2">:</span>
+            <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Error with </span><span class="s1">{</span><span class="s0">filename</span><span class="s1">}</span><span class="s3">: </span><span class="s1">{</span><span class="s0">e</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+
+<span class="s4"># Convert to numpy arrays</span>
+<span class="s0">X </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">array</span><span class="s2">(</span><span class="s0">mfcc_data</span><span class="s2">)  </span><span class="s4"># Shape: (samples, time_steps, features)</span>
+<span class="s0">y </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">array</span><span class="s2">(</span><span class="s0">labels</span><span class="s2">)     </span><span class="s4"># Shape: (samples,)</span>
+
+<span class="s4"># Save for reuse</span>
+<span class="s0">np</span><span class="s2">.</span><span class="s0">save</span><span class="s2">(</span><span class="s3">&quot;X_mfcc.npy&quot;</span><span class="s2">, </span><span class="s0">X</span><span class="s2">)</span>
+<span class="s0">np</span><span class="s2">.</span><span class="s0">save</span><span class="s2">(</span><span class="s3">&quot;y_labels.npy&quot;</span><span class="s2">, </span><span class="s0">y</span><span class="s2">)</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;Saved </span><span class="s1">{</span><span class="s0">X</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]</span><span class="s1">} </span><span class="s3">samples, each with shape </span><span class="s1">{</span><span class="s0">X</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">1</span><span class="s2">:]</span><span class="s1">} </span><span class="s3">(time steps x features)&quot;</span><span class="s2">)</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">from </span><span class="s0">tensorflow</span><span class="s2">.</span><span class="s0">keras</span><span class="s2">.</span><span class="s0">models </span><span class="s1">import </span><span class="s0">Sequential</span>
+<span class="s1">from </span><span class="s0">tensorflow</span><span class="s2">.</span><span class="s0">keras</span><span class="s2">.</span><span class="s0">layers </span><span class="s1">import </span><span class="s0">LSTM</span><span class="s2">, </span><span class="s0">Dense</span><span class="s2">, </span><span class="s0">Dropout</span>
+<span class="s1">from </span><span class="s0">tensorflow</span><span class="s2">.</span><span class="s0">keras</span><span class="s2">.</span><span class="s0">utils </span><span class="s1">import </span><span class="s0">to_categorical</span>
+<span class="s1">from </span><span class="s0">sklearn</span><span class="s2">.</span><span class="s0">model_selection </span><span class="s1">import </span><span class="s0">train_test_split</span>
+<span class="s1">from </span><span class="s0">tensorflow</span><span class="s2">.</span><span class="s0">keras</span><span class="s2">.</span><span class="s0">callbacks </span><span class="s1">import </span><span class="s0">EarlyStopping</span>
+
+<span class="s4"># Load preprocessed data</span>
+<span class="s0">X </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">load</span><span class="s2">(</span><span class="s3">&quot;X_mfcc.npy&quot;</span><span class="s2">)</span>
+<span class="s0">y </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">load</span><span class="s2">(</span><span class="s3">&quot;y_labels.npy&quot;</span><span class="s2">)</span>
+
+<span class="s4"># Normalize if needed</span>
+<span class="s0">X </span><span class="s2">= (</span><span class="s0">X </span><span class="s2">- </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">X</span><span class="s2">)) / </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">X</span><span class="s2">)</span>
+
+<span class="s4"># Convert labels to one-hot</span>
+<span class="s0">y_categorical </span><span class="s2">= </span><span class="s0">to_categorical</span><span class="s2">(</span><span class="s0">y </span><span class="s2">- </span><span class="s5">1</span><span class="s2">)  </span><span class="s4"># 1-indexed → 0-indexed</span>
+
+<span class="s4"># Split dataset</span>
+<span class="s0">X_train</span><span class="s2">, </span><span class="s0">X_test</span><span class="s2">, </span><span class="s0">y_train</span><span class="s2">, </span><span class="s0">y_test </span><span class="s2">= </span><span class="s0">train_test_split</span><span class="s2">(</span><span class="s0">X</span><span class="s2">, </span><span class="s0">y_categorical</span><span class="s2">, </span><span class="s0">test_size</span><span class="s2">=</span><span class="s5">0.2</span><span class="s2">, </span><span class="s0">random_state</span><span class="s2">=</span><span class="s5">42</span><span class="s2">)</span>
+
+<span class="s4"># Build LSTM model</span>
+<span class="s0">model </span><span class="s2">= </span><span class="s0">Sequential</span><span class="s2">([</span>
+    <span class="s0">LSTM</span><span class="s2">(</span><span class="s5">64</span><span class="s2">, </span><span class="s0">return_sequences</span><span class="s2">=</span><span class="s1">True</span><span class="s2">, </span><span class="s0">input_shape</span><span class="s2">=(</span><span class="s0">X</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">1</span><span class="s2">], </span><span class="s0">X</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">2</span><span class="s2">])),</span>
+    <span class="s0">Dropout</span><span class="s2">(</span><span class="s5">0.3</span><span class="s2">),</span>
+    <span class="s0">LSTM</span><span class="s2">(</span><span class="s5">32</span><span class="s2">),</span>
+    <span class="s0">Dense</span><span class="s2">(</span><span class="s5">32</span><span class="s2">, </span><span class="s0">activation</span><span class="s2">=</span><span class="s3">'relu'</span><span class="s2">),</span>
+    <span class="s0">Dense</span><span class="s2">(</span><span class="s0">y_categorical</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">1</span><span class="s2">], </span><span class="s0">activation</span><span class="s2">=</span><span class="s3">'softmax'</span><span class="s2">)  </span><span class="s4"># 4 classes</span>
+<span class="s2">])</span>
+
+<span class="s0">model</span><span class="s2">.</span><span class="s0">compile</span><span class="s2">(</span><span class="s0">loss</span><span class="s2">=</span><span class="s3">'categorical_crossentropy'</span><span class="s2">, </span><span class="s0">optimizer</span><span class="s2">=</span><span class="s3">'adam'</span><span class="s2">, </span><span class="s0">metrics</span><span class="s2">=[</span><span class="s3">'accuracy'</span><span class="s2">])</span>
+<span class="s0">model</span><span class="s2">.</span><span class="s0">summary</span><span class="s2">()</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s4"># Early stopping</span>
+<span class="s0">early_stop </span><span class="s2">= </span><span class="s0">EarlyStopping</span><span class="s2">(</span>
+    <span class="s0">monitor</span><span class="s2">=</span><span class="s3">'val_loss'</span><span class="s2">,</span>
+    <span class="s0">patience</span><span class="s2">=</span><span class="s5">5</span><span class="s2">,</span>
+    <span class="s0">restore_best_weights</span><span class="s2">=</span><span class="s1">True</span>
+<span class="s2">)</span>
+<span class="s0">history </span><span class="s2">= </span><span class="s0">model</span><span class="s2">.</span><span class="s0">fit</span><span class="s2">(</span><span class="s0">X_train</span><span class="s2">, </span><span class="s0">y_train</span><span class="s2">, </span><span class="s0">epochs</span><span class="s2">=</span><span class="s5">50</span><span class="s2">, </span><span class="s0">batch_size</span><span class="s2">=</span><span class="s5">8</span><span class="s2">, </span><span class="s0">validation_split</span><span class="s2">=</span><span class="s5">0.2</span><span class="s2">)</span>
+
+<span class="s4"># Save the model</span>
+<span class="s0">model</span><span class="s2">.</span><span class="s0">save</span><span class="s2">(</span><span class="s3">&quot;lstm_verse_classifier.keras&quot;</span><span class="s2">)</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">matplotlib</span><span class="s2">.</span><span class="s0">pyplot </span><span class="s1">as </span><span class="s0">plt</span>
+
+<span class="s4"># Plot training &amp; validation accuracy</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">figure</span><span class="s2">(</span><span class="s0">figsize</span><span class="s2">=(</span><span class="s5">12</span><span class="s2">, </span><span class="s5">5</span><span class="s2">))</span>
+
+<span class="s4"># Accuracy</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">1</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">history</span><span class="s2">.</span><span class="s0">history</span><span class="s2">[</span><span class="s3">'accuracy'</span><span class="s2">], </span><span class="s0">label</span><span class="s2">=</span><span class="s3">'Train Accuracy'</span><span class="s2">, </span><span class="s0">marker</span><span class="s2">=</span><span class="s3">'o'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">history</span><span class="s2">.</span><span class="s0">history</span><span class="s2">[</span><span class="s3">'val_accuracy'</span><span class="s2">], </span><span class="s0">label</span><span class="s2">=</span><span class="s3">'Validation Accuracy'</span><span class="s2">, </span><span class="s0">marker</span><span class="s2">=</span><span class="s3">'o'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">'Accuracy over Epochs'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">xlabel</span><span class="s2">(</span><span class="s3">'Epoch'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">ylabel</span><span class="s2">(</span><span class="s3">'Accuracy'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">)</span>
+
+<span class="s4"># Loss</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">subplot</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">2</span><span class="s2">, </span><span class="s5">2</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">history</span><span class="s2">.</span><span class="s0">history</span><span class="s2">[</span><span class="s3">'loss'</span><span class="s2">], </span><span class="s0">label</span><span class="s2">=</span><span class="s3">'Train Loss'</span><span class="s2">, </span><span class="s0">marker</span><span class="s2">=</span><span class="s3">'o'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">plot</span><span class="s2">(</span><span class="s0">history</span><span class="s2">.</span><span class="s0">history</span><span class="s2">[</span><span class="s3">'val_loss'</span><span class="s2">], </span><span class="s0">label</span><span class="s2">=</span><span class="s3">'Validation Loss'</span><span class="s2">, </span><span class="s0">marker</span><span class="s2">=</span><span class="s3">'o'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">title</span><span class="s2">(</span><span class="s3">'Loss over Epochs'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">xlabel</span><span class="s2">(</span><span class="s3">'Epoch'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">ylabel</span><span class="s2">(</span><span class="s3">'Loss'</span><span class="s2">)</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">legend</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">grid</span><span class="s2">(</span><span class="s1">True</span><span class="s2">)</span>
+
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">tight_layout</span><span class="s2">()</span>
+<span class="s0">plt</span><span class="s2">.</span><span class="s0">show</span><span class="s2">()</span>
+<hr class="ls0"><span class="s0">#%% 
+</span><span class="s1">import </span><span class="s0">pyaudio</span>
+<span class="s1">import </span><span class="s0">numpy </span><span class="s1">as </span><span class="s0">np</span>
+<span class="s1">import </span><span class="s0">librosa</span>
+<span class="s1">import </span><span class="s0">threading</span>
+<span class="s1">from </span><span class="s0">tensorflow</span><span class="s2">.</span><span class="s0">keras</span><span class="s2">.</span><span class="s0">models </span><span class="s1">import </span><span class="s0">load_model</span>
+<span class="s1">import </span><span class="s0">os</span>
+
+<span class="s4"># Load LSTM model</span>
+<span class="s0">model </span><span class="s2">= </span><span class="s0">load_model</span><span class="s2">(</span><span class="s3">&quot;lstm_verse_classifier.keras&quot;</span><span class="s2">)</span>
+
+<span class="s4"># Verse mapping</span>
+<span class="s0">verse_texts </span><span class="s2">= {</span>
+    <span class="s5">1</span><span class="s2">: </span><span class="s3">&quot;قُلْ هُوَ اللَّهُ أَحَدٌ&quot;</span><span class="s2">,</span>
+    <span class="s5">2</span><span class="s2">: </span><span class="s3">&quot;اللَّهُ الصَّمَدُ&quot;</span><span class="s2">,</span>
+    <span class="s5">3</span><span class="s2">: </span><span class="s3">&quot;لَمْ يَلِدْ وَلَمْ يُولَدْ&quot;</span><span class="s2">,</span>
+    <span class="s5">4</span><span class="s2">: </span><span class="s3">&quot;وَلَمْ يَكُن لَهُۥۤ۟ كُفُوًا أَحَدٌ&quot;</span>
+<span class="s2">}</span>
+
+<span class="s4"># Settings</span>
+<span class="s0">RATE </span><span class="s2">= </span><span class="s5">16000</span>
+<span class="s0">CHUNK_DURATION </span><span class="s2">= </span><span class="s5">2  </span><span class="s4"># in seconds</span>
+<span class="s0">CHUNK_SIZE </span><span class="s2">= </span><span class="s0">RATE </span><span class="s2">* </span><span class="s0">CHUNK_DURATION</span>
+<span class="s0">N_MFCC </span><span class="s2">= </span><span class="s5">13</span>
+<span class="s0">MAX_LEN </span><span class="s2">= </span><span class="s5">50</span>
+
+<span class="s0">stop_flag </span><span class="s2">= </span><span class="s1">False</span>
+<span class="s0">highlighted_verses </span><span class="s2">= </span><span class="s0">set</span><span class="s2">()</span>
+<span class="s0">best_prediction </span><span class="s2">= </span><span class="s1">None</span>
+<span class="s0">best_confidence </span><span class="s2">= </span><span class="s5">0.0</span>
+
+<span class="s4"># Wait for user to press Enter to stop</span>
+<span class="s1">def </span><span class="s0">wait_for_stop</span><span class="s2">():</span>
+    <span class="s1">global </span><span class="s0">stop_flag</span>
+    <span class="s0">input</span><span class="s2">(</span><span class="s3">&quot;🔘 Press Enter to stop recitation...</span><span class="s1">\n</span><span class="s3">&quot;</span><span class="s2">)</span>
+    <span class="s0">stop_flag </span><span class="s2">= </span><span class="s1">True</span>
+
+<span class="s4"># Predict from audio chunk</span>
+<span class="s1">def </span><span class="s0">predict_chunk</span><span class="s2">(</span><span class="s0">audio_data</span><span class="s2">):</span>
+    <span class="s0">y_trimmed</span><span class="s2">, </span><span class="s0">_ </span><span class="s2">= </span><span class="s0">librosa</span><span class="s2">.</span><span class="s0">effects</span><span class="s2">.</span><span class="s0">trim</span><span class="s2">(</span><span class="s0">audio_data</span><span class="s2">, </span><span class="s0">top_db</span><span class="s2">=</span><span class="s5">25</span><span class="s2">)</span>
+    <span class="s1">if </span><span class="s0">len</span><span class="s2">(</span><span class="s0">y_trimmed</span><span class="s2">) == </span><span class="s5">0</span><span class="s2">:</span>
+        <span class="s1">return None</span><span class="s2">, </span><span class="s5">0.0</span>
+
+    <span class="s0">mfcc </span><span class="s2">= </span><span class="s0">librosa</span><span class="s2">.</span><span class="s0">feature</span><span class="s2">.</span><span class="s0">mfcc</span><span class="s2">(</span><span class="s0">y</span><span class="s2">=</span><span class="s0">y_trimmed</span><span class="s2">, </span><span class="s0">sr</span><span class="s2">=</span><span class="s0">RATE</span><span class="s2">, </span><span class="s0">n_mfcc</span><span class="s2">=</span><span class="s0">N_MFCC</span><span class="s2">).</span><span class="s0">T</span>
+    <span class="s1">if </span><span class="s0">mfcc</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">0</span><span class="s2">] &lt; </span><span class="s0">MAX_LEN</span><span class="s2">:</span>
+        <span class="s0">mfcc </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">pad</span><span class="s2">(</span><span class="s0">mfcc</span><span class="s2">, ((</span><span class="s5">0</span><span class="s2">, </span><span class="s0">MAX_LEN </span><span class="s2">- </span><span class="s0">mfcc</span><span class="s2">.</span><span class="s0">shape</span><span class="s2">[</span><span class="s5">0</span><span class="s2">]), (</span><span class="s5">0</span><span class="s2">, </span><span class="s5">0</span><span class="s2">)), </span><span class="s0">mode</span><span class="s2">=</span><span class="s3">'constant'</span><span class="s2">)</span>
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s0">mfcc </span><span class="s2">= </span><span class="s0">mfcc</span><span class="s2">[:</span><span class="s0">MAX_LEN</span><span class="s2">, :]</span>
+
+    <span class="s0">mfcc </span><span class="s2">= (</span><span class="s0">mfcc </span><span class="s2">- </span><span class="s0">np</span><span class="s2">.</span><span class="s0">mean</span><span class="s2">(</span><span class="s0">mfcc</span><span class="s2">)) / </span><span class="s0">np</span><span class="s2">.</span><span class="s0">std</span><span class="s2">(</span><span class="s0">mfcc</span><span class="s2">)</span>
+    <span class="s0">mfcc </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">expand_dims</span><span class="s2">(</span><span class="s0">mfcc</span><span class="s2">, </span><span class="s0">axis</span><span class="s2">=</span><span class="s5">0</span><span class="s2">)</span>
+
+    <span class="s0">prediction </span><span class="s2">= </span><span class="s0">model</span><span class="s2">.</span><span class="s0">predict</span><span class="s2">(</span><span class="s0">mfcc</span><span class="s2">, </span><span class="s0">verbose</span><span class="s2">=</span><span class="s5">0</span><span class="s2">)</span>
+    <span class="s0">predicted_class </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">argmax</span><span class="s2">(</span><span class="s0">prediction</span><span class="s2">) + </span><span class="s5">1</span>
+    <span class="s0">confidence </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">max</span><span class="s2">(</span><span class="s0">prediction</span><span class="s2">)</span>
+
+    <span class="s1">return </span><span class="s0">predicted_class</span><span class="s2">, </span><span class="s0">confidence</span>
+
+<span class="s4"># Highlight terminal verse</span>
+<span class="s1">def </span><span class="s0">display_verses</span><span class="s2">(</span><span class="s0">highlight_id</span><span class="s2">=</span><span class="s1">None</span><span class="s2">):</span>
+    <span class="s0">os</span><span class="s2">.</span><span class="s0">system</span><span class="s2">(</span><span class="s3">'cls' </span><span class="s1">if </span><span class="s0">os</span><span class="s2">.</span><span class="s0">name </span><span class="s2">== </span><span class="s3">'nt' </span><span class="s1">else </span><span class="s3">'clear'</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">📖 Surah Al-Ikhlas</span><span class="s1">\n</span><span class="s3">&quot;</span><span class="s2">)</span>
+    <span class="s1">for </span><span class="s0">i </span><span class="s1">in </span><span class="s0">range</span><span class="s2">(</span><span class="s5">1</span><span class="s2">, </span><span class="s5">5</span><span class="s2">):</span>
+        <span class="s0">verse </span><span class="s2">= </span><span class="s0">verse_texts</span><span class="s2">[</span><span class="s0">i</span><span class="s2">]</span>
+        <span class="s1">if </span><span class="s0">i </span><span class="s2">== </span><span class="s0">highlight_id</span><span class="s2">:</span>
+            <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;&gt;&gt;&gt; 🟢 </span><span class="s1">{</span><span class="s0">verse</span><span class="s1">} </span><span class="s3">&lt;&lt;&lt;&quot;</span><span class="s2">)</span>
+        <span class="s1">elif </span><span class="s0">i </span><span class="s1">in </span><span class="s0">highlighted_verses</span><span class="s2">:</span>
+            <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;✅ </span><span class="s1">{</span><span class="s0">verse</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+        <span class="s1">else</span><span class="s2">:</span>
+            <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;⬜ </span><span class="s1">{</span><span class="s0">verse</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">🎧 Listening...&quot;</span><span class="s2">)</span>
+
+<span class="s4"># Start PyAudio stream</span>
+<span class="s0">p </span><span class="s2">= </span><span class="s0">pyaudio</span><span class="s2">.</span><span class="s0">PyAudio</span><span class="s2">()</span>
+<span class="s0">stream </span><span class="s2">= </span><span class="s0">p</span><span class="s2">.</span><span class="s0">open</span><span class="s2">(</span><span class="s0">format</span><span class="s2">=</span><span class="s0">pyaudio</span><span class="s2">.</span><span class="s0">paInt16</span><span class="s2">,</span>
+                <span class="s0">channels</span><span class="s2">=</span><span class="s5">1</span><span class="s2">,</span>
+                <span class="s0">rate</span><span class="s2">=</span><span class="s0">RATE</span><span class="s2">,</span>
+                <span class="s0">input</span><span class="s2">=</span><span class="s1">True</span><span class="s2">,</span>
+                <span class="s0">frames_per_buffer</span><span class="s2">=</span><span class="s0">CHUNK_SIZE</span><span class="s2">)</span>
+
+<span class="s0">listener_thread </span><span class="s2">= </span><span class="s0">threading</span><span class="s2">.</span><span class="s0">Thread</span><span class="s2">(</span><span class="s0">target</span><span class="s2">=</span><span class="s0">wait_for_stop</span><span class="s2">)</span>
+<span class="s0">listener_thread</span><span class="s2">.</span><span class="s0">start</span><span class="s2">()</span>
+
+<span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;🎙️ Real-Time Surah Al-Ikhlas Recitation Detection Started...</span><span class="s1">\n</span><span class="s3">&quot;</span><span class="s2">)</span>
+<span class="s0">display_verses</span><span class="s2">()</span>
+
+<span class="s1">try</span><span class="s2">:</span>
+    <span class="s1">while not </span><span class="s0">stop_flag</span><span class="s2">:</span>
+        <span class="s0">audio_data </span><span class="s2">= </span><span class="s0">stream</span><span class="s2">.</span><span class="s0">read</span><span class="s2">(</span><span class="s0">CHUNK_SIZE</span><span class="s2">, </span><span class="s0">exception_on_overflow</span><span class="s2">=</span><span class="s1">False</span><span class="s2">)</span>
+        <span class="s0">audio_np </span><span class="s2">= </span><span class="s0">np</span><span class="s2">.</span><span class="s0">frombuffer</span><span class="s2">(</span><span class="s0">audio_data</span><span class="s2">, </span><span class="s0">dtype</span><span class="s2">=</span><span class="s0">np</span><span class="s2">.</span><span class="s0">int16</span><span class="s2">).</span><span class="s0">astype</span><span class="s2">(</span><span class="s0">np</span><span class="s2">.</span><span class="s0">float32</span><span class="s2">) / </span><span class="s5">32768.0</span>
+
+        <span class="s0">predicted_class</span><span class="s2">, </span><span class="s0">confidence </span><span class="s2">= </span><span class="s0">predict_chunk</span><span class="s2">(</span><span class="s0">audio_np</span><span class="s2">)</span>
+
+        <span class="s1">if </span><span class="s0">predicted_class </span><span class="s1">and </span><span class="s0">confidence </span><span class="s2">&gt; </span><span class="s5">0.4</span><span class="s2">:</span>
+            <span class="s1">if </span><span class="s0">confidence </span><span class="s2">&gt; </span><span class="s0">best_confidence</span><span class="s2">:</span>
+                <span class="s0">best_prediction </span><span class="s2">= </span><span class="s0">predicted_class</span>
+                <span class="s0">best_confidence </span><span class="s2">= </span><span class="s0">confidence</span>
+
+            <span class="s0">highlighted_verses</span><span class="s2">.</span><span class="s0">add</span><span class="s2">(</span><span class="s0">predicted_class</span><span class="s2">)</span>
+            <span class="s0">display_verses</span><span class="s2">(</span><span class="s0">highlight_id</span><span class="s2">=</span><span class="s0">predicted_class</span><span class="s2">)</span>
+
+<span class="s1">except </span><span class="s0">Exception </span><span class="s1">as </span><span class="s0">e</span><span class="s2">:</span>
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;</span><span class="s1">\n</span><span class="s3">❌ Error: </span><span class="s1">{</span><span class="s0">e</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+
+<span class="s1">finally</span><span class="s2">:</span>
+    <span class="s0">stream</span><span class="s2">.</span><span class="s0">stop_stream</span><span class="s2">()</span>
+    <span class="s0">stream</span><span class="s2">.</span><span class="s0">close</span><span class="s2">()</span>
+    <span class="s0">p</span><span class="s2">.</span><span class="s0">terminate</span><span class="s2">()</span>
+
+    <span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">🛑 Recitation ended by user.&quot;</span><span class="s2">)</span>
+    <span class="s1">if </span><span class="s0">best_prediction</span><span class="s2">:</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;</span><span class="s1">\n</span><span class="s3">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;✅ Most Confident Verse: V</span><span class="s1">{</span><span class="s0">best_prediction</span><span class="s1">} </span><span class="s3">| Confidence: </span><span class="s1">{</span><span class="s0">best_confidence</span><span class="s1">:</span><span class="s3">.2f</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s3">f&quot;🕋 </span><span class="s1">{</span><span class="s0">verse_texts</span><span class="s2">[</span><span class="s0">best_prediction</span><span class="s2">]</span><span class="s1">}</span><span class="s3">&quot;</span><span class="s2">)</span>
+    <span class="s1">else</span><span class="s2">:</span>
+        <span class="s0">print</span><span class="s2">(</span><span class="s3">&quot;⚠️ No confident verse detected.&quot;</span><span class="s2">)</span>
+<hr class="ls0"><span class="s0">#%% 
+</span></pre>
+</body>
+</html>
